@@ -71,7 +71,7 @@ while(omg != age){
 }
 
 //arrays
-let arr1 = [1,2,2,4,5,6,7,8,9,10,"nigga"]
+let arr1 = [1,2,2,4,5,6,7,8,9,10,"ni---"]
 arr1.pop()//removes the racist word
 //printing it all
 /*for(let i = 0; i < arr1.length; i++){
