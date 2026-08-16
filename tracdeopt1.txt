@@ -1,0 +1,3 @@
+[bailout (kind: deopt-eager, reason: Insufficient type feedback for generic named access): begin. deoptimizing 0x353f38a504f9 <JSFunction (sfi = 0xea5f132d0c1)>, 0x00c897304211 <Code TURBOFAN>, opt id 1, bytecode offset 42, deopt exit 4, FP to SP delta 120, caller SP 0x7fffa2944188, pc 0x7f16a10ce71f]
+[bailout (kind: deopt-eager, reason: not a Smi): begin. deoptimizing 0x353f38a50d81 <JSFunction add (sfi = 0xea5f132d129)>, 0x00c897304049 <Code TURBOFAN>, opt id 0, bytecode offset 2, deopt exit 0, FP to SP delta 32, caller SP 0x7fffa29440e0, pc 0x7f16a10ce535]
+Hello2

@@ -1,0 +1,9 @@
+[marking 0x2cf42d4924b1 <JSFunction add (sfi = 0x1476b0d88c1)> for optimization to TURBOFAN, ConcurrencyMode::kConcurrent, reason: hot and stable]
+[compiling method 0x2cf42d4924b1 <JSFunction add (sfi = 0x1476b0d88c1)> (target TURBOFAN), mode: ConcurrencyMode::kConcurrent]
+[marking 0x2cf42d491c29 <JSFunction (sfi = 0x1476b0d8859)> for optimization to TURBOFAN, ConcurrencyMode::kConcurrent, reason: hot and stable]
+[compiling method 0x2cf42d491c29 <JSFunction (sfi = 0x1476b0d8859)> (target TURBOFAN) OSR, mode: ConcurrencyMode::kConcurrent]
+[completed compiling 0x2cf42d4924b1 <JSFunction add (sfi = 0x1476b0d88c1)> (target TURBOFAN) - took 0.027, 1.076, 0.041 ms]
+[completed optimizing 0x2cf42d4924b1 <JSFunction add (sfi = 0x1476b0d88c1)> (target TURBOFAN)]
+[completed compiling 0x2cf42d491c29 <JSFunction (sfi = 0x1476b0d8859)> (target TURBOFAN) OSR - took 0.015, 1.670, 0.022 ms]
+[completed optimizing 0x2cf42d491c29 <JSFunction (sfi = 0x1476b0d8859)> (target TURBOFAN) OSR]
+Hello2
