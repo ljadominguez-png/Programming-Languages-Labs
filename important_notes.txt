@@ -5,7 +5,7 @@ node --print-bytecode
   Ignition interpreter before the code is compiled to 
   machine code.
 
-Pro-tip: Combine with --print-bytecode-filter=functionName 
+Pro-tip: Combine with node --print-bytecode --print-bytecode-filter=functionName 
 so you only inspect the specific function rather than the whole script.
 
 node --trace-opt 
