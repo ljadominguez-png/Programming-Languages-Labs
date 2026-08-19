@@ -63,27 +63,38 @@ class Lexer {
     while (this.index < this.input.length) {
       let remaining = this.input.slice(this.index);
       let matched = false;
-
+      
+      //loop to the rules list to find a match
       for (const tokentype of this.rules) {
         const match = remaining.match(tokentype.regex);
+        // the matched will always be at index 0 because we are constantly slicing 
+        //every index ex. "5 + 1"
+        /*
+        started at index 0 = index < input.length = true
+        remaining = 5 + 1
+        loop sa tokens tignan kung may match
+        if meron yon yong ilalagay sa value
+        as long as hindi siya SPACE mag pu push siya as a new token
+        +1 index then since nag true mag lo loop ulit 
+        as long as index < input.length
+        */
         if (match) {
-          const value = match[0];
+          let value = match[0];
 
           if (tokentype.type !== "SPACE") {
             tokens.push(new Token(tokentype.type, value));
           }
-          // bwakanang shyt yong length naging lenght
+          // yong length naging lenght
           this.index = this.index + value.length;
           matched = true;
           break;
         }
       }
-      if (matched === false) {
-        throw new Error("EOF");
-      }
     }
+    //reached at the very end
     tokens.push(new Token("EOF", null));
     return tokens;
+    // output:   Token { type: 'NUMBER', value: '100' },
   }
 }
 
@@ -93,15 +104,19 @@ class Parser {
     this.index = 0;
   }
   //peek method
+  // kumbaga sa two pointer this is the reader 
+  // or in other words "MATA"
   sirip() {
     return this.tokens[this.index];
   }
   //aka consume
+  //chine check niya if yong bina basa niya na token is nag ma match or valid
+  //if valid then move to the next token then i re return niya yong valid na token
   usaren(inaasahangTypo) {
     const currentToken = this.sirip();
-    if (currentToken.type === inaasahangTypo) {
-      this.index++;
-      return currentToken;
+    if (currentToken.type === inaasahangTypo) {// if valid token
+      this.index++;// move to the next token
+      return currentToken; // return the recent valid token
     } else {
       throw new Error("Invalid ka jud");
     }
@@ -204,8 +219,3 @@ console.log(JSON.stringify(ast, null, 2));
 // 3. Evaluate
 const result = evalAST(ast);
 console.log("Result:", result);
-//input
-//tokens
-//ast
-
-// dislplay
