@@ -1,94 +1,121 @@
+// ==========================================
+// 1. TOKEN DEFINITIONS & LEXER
+// ==========================================
 class Token {
-  constructor(type, value) {
+  constructor(type, value, line, col) {
     this.type = type;
     this.value = value;
+    this.line = line;
+    this.col = col;
   }
 }
 
 class Lexer {
-  constructor(sourceText) {
-    this.input = sourceText;
-    this.index = 0;
-    this.rules = [
-      { type: "NUMBER", regex: /^[0-9]+/ },
-      { type: "ADD", regex: /^\+/ },
+  constructor(source) {
+    this.source = source;
+    this.cursor = 0;
+    this.line = 1;
+    this.col = 1;
+
+    // Ordered token specification
+    this.tokenSpecs = [
+      { type: "NUMBER", regex: /^[0-9]+(\.[0-9]+)?/ },
+      { type: "IDENTIFIER", regex: /^[a-zA-Z_][a-zA-Z0-9_]*/ },
+      { type: "PLUS", regex: /^\+/ },
+      { type: "MINUS", regex: /^-/ },
       { type: "MULT", regex: /^\*/ },
       { type: "DIV", regex: /^\// },
-      { type: "SUB", regex: /^\-/ },
       { type: "LPAREN", regex: /^\(/ },
       { type: "RPAREN", regex: /^\)/ },
-      { type: "SPACE", regex: /^\s+/ },
+      { type: "ASSIGN", regex: /^=/ },
+      { type: "WHITESPACE", regex: /^\s+/ },
     ];
   }
 
   tokenize() {
     const tokens = [];
 
-    // FIX 1: Fixed .length typo
-    while (this.index < this.input.length) {
-      let remaining = this.input.slice(this.index);
+    while (this.cursor < this.source.length) {
+      const remaining = this.source.slice(this.cursor);
       let matched = false;
 
-      for (const tokentype of this.rules) {
-        // FIX 2: match against tokentype.regex, not the whole object
-        const match = remaining.match(tokentype.regex);
+      for (const { type, regex } of this.tokenSpecs) {
+        const match = remaining.match(regex);
         if (match) {
           const value = match[0];
 
-          if (tokentype.type !== "SPACE") {
-            tokens.push(new Token(tokentype.type, value));
+          // Track newlines for line/col counting
+          const newlines = (value.match(/\n/g) || []).length;
+          
+          if (type !== "WHITESPACE") {
+            tokens.push(new Token(type, value, this.line, this.col));
           }
-          // FIX 1: Fixed .length typo
-          this.index = this.index + value.length;
+
+          this.cursor += value.length;
+          if (newlines > 0) {
+            this.line += newlines;
+            this.col = value.length - value.lastIndexOf("\n");
+          } else {
+            this.col += value.length;
+          }
+
           matched = true;
           break;
         }
       }
 
-      // FIX 3: Moved OUTSIDE the for loop
-      if (matched === false) {
-        throw new Error(`Unexpected token at index ${this.index}: ${remaining[0]}`);
+      if (!matched) {
+        throw new Error(
+          `Lexer Error: Unrecognized character '${this.source[this.cursor]}' at Line ${this.line}, Col ${this.col}`
+        );
       }
     }
 
-    tokens.push(new Token("EOF", null));
+    tokens.push(new Token("EOF", null, this.line, this.col));
     return tokens;
   }
 }
 
+// ==========================================
+// 2. RECURSIVE DESCENT PARSER (JSON AST)
+// ==========================================
 class Parser {
   constructor(tokens) {
     this.tokens = tokens;
     this.index = 0;
   }
 
-  // peek method
-  sirip() {
-    return this.tokens[this.index] || { type: "EOF", value: null };
+  peek() {
+    return this.tokens[this.index];
   }
 
-  // aka consume
-  usaren(inaasahangTypo) {
-    const currentToken = this.sirip();
-    if (currentToken.type === inaasahangTypo) {
-      this.index++;
-      return currentToken;
-    } else {
-      throw new Error(`Expected ${inaasahangTypo} but got ${currentToken.type}`);
+  consume(expectedType) {
+    const token = this.peek();
+    if (token.type !== expectedType) {
+      throw new Error(
+        `Parse Error: Expected '${expectedType}' but received '${token.type}' (${token.value}) at Line ${token.line}, Col ${token.col}`
+      );
     }
+    this.index++;
+    return token;
   }
 
-  // low precedence +/-
-  Expresyon() {
-    let leftNode = this.Term();
-    while (this.sirip().type === "ADD" || this.sirip().type === "SUB") {
-      const operatorToken = this.usaren(this.sirip().type);
-      const rightNode = this.Term();
+  parse() {
+    const ast = this.parseExpression();
+    this.consume("EOF");
+    return ast;
+  }
 
-      // FIX 5: Use 'left' and 'right' so evalAST can read them
+  // Expression -> Term ( ('+' | '-') Term )*
+  parseExpression() {
+    let leftNode = this.parseTerm();
+
+    while (this.peek().type === "PLUS" || this.peek().type === "MINUS") {
+      const opToken = this.consume(this.peek().type);
+      const rightNode = this.parseTerm();
       leftNode = {
         type: "BinaryExpression",
-        operator: operatorToken.value,
+        operator: opToken.value,
         left: leftNode,
         right: rightNode,
       };
@@ -96,16 +123,16 @@ class Parser {
     return leftNode;
   }
 
-  // medium precedence * and /
-  Term() {
-    // FIX 4: Changed to leftNode and added return at the bottom
-    let leftNode = this.Factor();
-    while (this.sirip().type === "MULT" || this.sirip().type === "DIV") {
-      const operatorToken = this.usaren(this.sirip().type);
-      const rightNode = this.Factor();
+  // Term -> Factor ( ('*' | '/') Factor )*
+  parseTerm() {
+    let leftNode = this.parseFactor();
+
+    while (this.peek().type === "MULT" || this.peek().type === "DIV") {
+      const opToken = this.consume(this.peek().type);
+      const rightNode = this.parseFactor();
       leftNode = {
         type: "BinaryExpression",
-        operator: operatorToken.value,
+        operator: opToken.value,
         left: leftNode,
         right: rightNode,
       };
@@ -113,70 +140,102 @@ class Parser {
     return leftNode;
   }
 
-  // highest precedence numbers and ()
-  Factor() {
-    const currentToken = this.sirip();
-    if (currentToken.type === "NUMBER") {
-      this.usaren("NUMBER");
+  // Factor -> NUMBER | IDENTIFIER | '(' Expression ')'
+  parseFactor() {
+    const token = this.peek();
+
+    if (token.type === "NUMBER") {
+      this.consume("NUMBER");
       return {
         type: "NumericLiteral",
-        value: parseFloat(currentToken.value),
+        value: parseFloat(token.value),
       };
     }
-    if (currentToken.type === "LPAREN") {
-      this.usaren("LPAREN");
-      const insideNode = this.Expresyon();
-      this.usaren("RPAREN");
-      return insideNode;
-    }
-    throw new Error(`Unexpected Token: ${currentToken.type}`);
-  }
 
-  Parse() {
-    return this.Expresyon();
+    if (token.type === "IDENTIFIER") {
+      this.consume("IDENTIFIER");
+      return {
+        type: "Identifier",
+        name: token.value,
+      };
+    }
+
+    if (token.type === "LPAREN") {
+      this.consume("LPAREN");
+      const expressionNode = this.parseExpression();
+      this.consume("RPAREN");
+      return expressionNode;
+    }
+
+    throw new Error(
+      `Parse Error: Unexpected token '${token.type}' (${token.value}) at Line ${token.line}, Col ${token.col}`
+    );
   }
 }
 
-// recursive descent evaluator
-function evalAST(node) {
-  if (node.type === "NumericLiteral") {
-    return node.value;
+// ==========================================
+// 3. TREE-WALKING AST EVALUATOR
+// ==========================================
+class Evaluator {
+  constructor(environment = {}) {
+    this.env = environment;
   }
 
-  if (node.type === "BinaryExpression") {
-    const leftNodeVal = evalAST(node.left);
-    const rightNodeVal = evalAST(node.right);
+  evaluate(node) {
+    switch (node.type) {
+      case "NumericLiteral":
+        return node.value;
 
-    switch (node.operator) {
-      case "+":
-        return leftNodeVal + rightNodeVal;
-      case "-":
-        return leftNodeVal - rightNodeVal;
-      case "*":
-        return leftNodeVal * rightNodeVal;
-      case "/":
-        if (rightNodeVal === 0) throw new Error("Division by zero");
-        return leftNodeVal / rightNodeVal;
+      case "Identifier":
+        if (!(node.name in this.env)) {
+          throw new Error(`Evaluation Error: Undefined variable '${node.name}'`);
+        }
+        return this.env[node.name];
+
+      case "BinaryExpression": {
+        const leftVal = this.evaluate(node.left);
+        const rightVal = this.evaluate(node.right);
+
+        switch (node.operator) {
+          case "+": return leftVal + rightVal;
+          case "-": return leftVal - rightVal;
+          case "*": return leftVal * rightVal;
+          case "/":
+            if (rightVal === 0) throw new Error("Evaluation Error: Division by zero");
+            return leftVal / rightVal;
+          default:
+            throw new Error(`Evaluation Error: Unsupported operator '${node.operator}'`);
+        }
+      }
+
+      default:
+        throw new Error(`Evaluation Error: Unknown node type '${node.type}'`);
     }
   }
 }
 
-// main runner
-const input = "5 + 4 * ";
+// ==========================================
+// DEMO / TEST RUN
+// ==========================================
+const sourceCode = "5 +  4 * 8";
+const variableScope = { basePrice: 15 };
 
-// 1. Tokenize
-const lexer = new Lexer(input);
+console.log("Input Expression:", sourceCode);
+
+// 1. Lexing
+const lexer = new Lexer(sourceCode);
 const tokens = lexer.tokenize();
-console.log("=== STEP 1: TOKEN STREAM ===");
+console.log("\n--- Token Stream ---");
 console.log(tokens);
 
-// 2. Parse to AST
+// 2. Parsing
 const parser = new Parser(tokens);
-const ast = parser.Parse();
-console.log("\n=== STEP 2: JSON AST ===");
+const ast = parser.parse();
+console.log("\n--- Generated JSON AST ---");
 console.log(JSON.stringify(ast, null, 2));
 
-// 3. Evaluate
-const result = evalAST(ast);
-console.log("\n=== STEP 3: EVALUATED RESULT ===");
-console.log("Result:", result);
+// 3. AST Evaluation
+const evaluator = new Evaluator(variableScope);
+const result = evaluator.evaluate(ast);
+console.log("\n--- Evaluator Output ---");
+console.log(`Evaluated Result with { basePrice: 15 }: ${result}`);
